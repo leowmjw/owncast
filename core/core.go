@@ -26,6 +26,9 @@ var (
 	_broadcaster  *models.Broadcaster
 )
 
+var handler ffmpeg.HLSHandler
+var fileWriter = ffmpeg.FileWriterReceiverService{}
+
 //Start starts up the core processing
 func Start() error {
 	resetDirectories()
@@ -39,6 +42,10 @@ func Start() error {
 		log.Error("failed to setup the storage")
 		return err
 	}
+
+	handler = ffmpeg.HLSHandler{}
+	handler.Storage = _storage
+	fileWriter.SetupFileWriterReceiverService(&handler)
 
 	if err := createInitialOfflineState(); err != nil {
 		log.Error("failed to create the initial offline state")
@@ -70,7 +77,7 @@ func createInitialOfflineState() error {
 		}
 	}
 
-	ffmpeg.ShowStreamOfflineState()
+	SetStreamAsDisconnected()
 
 	return nil
 }
@@ -133,16 +140,12 @@ func SetStreamAsConnected() {
 	}
 
 	chunkPath := config.Config.GetPrivateHLSSavePath()
-	// if usingExternalStorage {
-	// 	chunkPath = config.Config.GetPrivateHLSSavePath()
-	// }
 
 	go func() {
 		_transcoder = ffmpeg.NewTranscoder()
-		progress := _transcoder.Start()
-
-		ffmpeg.StartTranscoderMonitor(progress, _storage)
+		_transcoder.Start()
 	}()
+
 	ffmpeg.StartThumbnailGenerator(chunkPath, config.Config.VideoSettings.HighestQualityStreamIndex)
 }
 
@@ -151,5 +154,11 @@ func SetStreamAsDisconnected() {
 	_stats.StreamConnected = false
 	_stats.LastDisconnectTime = utils.NullTime{time.Now(), true}
 
-	ffmpeg.ShowStreamOfflineState()
+	go func() {
+		_transcoder := ffmpeg.NewTranscoder()
+		_transcoder.SetSegmentLength(10)
+		_transcoder.SetAppendToStream(false)
+		_transcoder.SetInput(config.Config.GetOfflineContentPath())
+		_transcoder.Start()
+	}()
 }
