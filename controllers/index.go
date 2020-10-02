@@ -12,6 +12,7 @@ import (
 
 	"github.com/gabek/owncast/config"
 	"github.com/gabek/owncast/core"
+	"github.com/gabek/owncast/models"
 	"github.com/gabek/owncast/router/middleware"
 	"github.com/gabek/owncast/utils"
 )
@@ -53,8 +54,11 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 	if path.Ext(r.URL.Path) == ".m3u8" {
 		middleware.DisableCache(w)
 
-		clientID := utils.GenerateClientIDFromRequest(r)
-		core.SetClientActive(clientID)
+		client := models.GenerateClientFromRequest(r)
+		core.SetClientActive(client)
+	} else {
+		// Set a cache control header of one day
+		middleware.SetCache(1, w)
 	}
 
 	// Set a cache control max-age header

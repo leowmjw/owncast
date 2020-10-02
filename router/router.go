@@ -13,10 +13,7 @@ import (
 	"github.com/gabek/owncast/core/chat"
 	"github.com/gabek/owncast/core/rtmp"
 	"github.com/gabek/owncast/router/middleware"
-<<<<<<< HEAD
 	"github.com/gabek/owncast/yp"
-=======
->>>>>>> Add support for ending the inbound stream. Closes #191
 )
 
 //Start starts the router for the http, ws, and rtmp
@@ -71,6 +68,9 @@ func Start() error {
 
 	// Get hardware stats
 	http.HandleFunc("/api/admin/hardwarestats", middleware.RequireAdminAuth(admin.GetHardwareStats))
+
+	// Connected clients
+	http.HandleFunc("/api/admin/clients", middleware.RequireAdminAuth(controllers.GetConnectedClients))
 
 	port := config.Config.GetPublicWebServerPort()
 
